@@ -458,7 +458,22 @@
             
             async loadFFmpegScript() {
                 if (window.FFmpeg || window.createFFmpeg) return;
+                // 允許手動指定（例如在 GitHub Pages 子路徑）
+                const manualScript = (window.FFMPEG_SCRIPT_URL || (window.FFMPEG_BASE_URL && window.FFMPEG_BASE_URL + '/ffmpeg.min.js')) || null;
+                const manualCore = (window.FFMPEG_CORE_URL || (window.FFMPEG_BASE_URL && window.FFMPEG_BASE_URL + '/ffmpeg-core.js')) || null;
+
+                // 從目前網址自動推測 GitHub Pages 子路徑，例如 /effect002/
+                let inferredBase = '';
+                try {
+                    const parts = (location.pathname || '').split('/').filter(Boolean);
+                    if (parts.length >= 1) {
+                        inferredBase = `/${parts[0]}`; // 例如 /effect002
+                    }
+                } catch(_) {}
+
                 const candidates = [
+                    // 使用者自訂優先
+                    ...(manualScript ? [{ script: manualScript, core: manualCore || manualScript.replace('ffmpeg.min.js', 'ffmpeg-core.js') }] : []),
                     {
                         script: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js',
                         core: 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js'
@@ -471,10 +486,15 @@
                         script: 'https://esm.run/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js',
                         core: 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js'
                     },
-                    {
-                        script: 'libs/ffmpeg/ffmpeg.min.js',
-                        core: 'libs/ffmpeg/ffmpeg-core.js'
-                    }
+                    // 本機相對路徑（頁面在子資料夾時嘗試多層）
+                    { script: './libs/ffmpeg/ffmpeg.min.js', core: './libs/ffmpeg/ffmpeg-core.js' },
+                    { script: 'libs/ffmpeg/ffmpeg.min.js', core: 'libs/ffmpeg/ffmpeg-core.js' },
+                    { script: '../libs/ffmpeg/ffmpeg.min.js', core: '../libs/ffmpeg/ffmpeg-core.js' },
+                    { script: '../../libs/ffmpeg/ffmpeg.min.js', core: '../../libs/ffmpeg/ffmpeg-core.js' },
+                    // 站台根目錄（本機開發可用；GitHub Pages 若有專案子路徑則可能無效）
+                    { script: '/libs/ffmpeg/ffmpeg.min.js', core: '/libs/ffmpeg/ffmpeg-core.js' },
+                    // GitHub Pages 專案子路徑（自動推測）
+                    ...(inferredBase ? [{ script: `${inferredBase}/libs/ffmpeg/ffmpeg.min.js`, core: `${inferredBase}/libs/ffmpeg/ffmpeg-core.js` }] : [])
                 ];
                 const tryLoad = (src) => new Promise((resolve, reject) => {
                     const s = document.createElement('script');
@@ -555,11 +575,13 @@
                 try { this.ffmpeg.FS('unlink', 'input.gif'); } catch(_) {}
                 try { this.ffmpeg.FS('unlink', 'output.webm'); } catch(_) {}
                 this.ffmpeg.FS('writeFile', 'input.gif', data);
-                // 將 GIF 轉為 WebM，保留大致幀率並關閉音訊
+                // 將 GIF 轉為 WebM（較寬鬆、速度優先）：VP8 + realtime，必要時可縮放/降 FPS
+                // 自動偵測幀率與尺寸；如需限制，可在此加入 -vf scale=... 或 -r ...
                 await this.ffmpeg.run(
                     '-i', 'input.gif',
-                    '-c:v', 'libvpx-vp9',
-                    '-b:v', '2M',
+                    '-c:v', 'libvpx',
+                    '-b:v', '1.5M',
+                    '-deadline', 'realtime',
                     '-pix_fmt', 'yuv420p',
                     '-an',
                     'output.webm'
