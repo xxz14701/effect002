@@ -1,0 +1,1851 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增強版動態特效覆蓋器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-area {
+            border: 3px dashed rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.15);
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group {
+            min-width: 200px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 16px;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        select option {
+            background: #2a5298;
+            color: white;
+        }
+
+        input[type="range"] {
+            padding: 5px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .media-container {
+            position: relative;
+            max-width: 100%;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            width: 300px;
+            height: 300px;
+        }
+
+        #mediaElement {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        #effectCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        .download-section {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .download-options {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .option-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .option-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .download-btn {
+            background: linear-gradient(45deg, #FF6B6B, #ee5a52);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .download-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .effect-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .effect-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .category-section {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .category-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .download-btn {
+                display: block;
+                margin: 10px auto;
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 增強版動態特效覆蓋器 ✨</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p style="font-size: 1.2em; margin-bottom: 20px;">拖曳照片或影片到這裡，或點擊上傳</p>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                📁 選擇檔案
+            </button>
+            <input type="file" id="fileInput" accept="image/*,video/*">
+            <div id="ffmpegStatus" style="margin-top:10px;font-size:12px;opacity:0.85"></div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="effectType">特效類型</label>
+                <select id="effectType">
+                    <optgroup label="天氣效果">
+                        <option value="snow">❄️ 下雪</option>
+                        <option value="rain">🌧️ 下雨</option>
+                        <option value="storm">⛈️ 暴風雨</option>
+                        <option value="lightning">⚡ 閃電</option>
+                    </optgroup>
+                    <optgroup label="自然效果">
+                        <option value="leaves">🍂 落葉</option>
+                        <option value="sakura">🌸 櫻花</option>
+                        <option value="fireflies">✨ 螢火蟲</option>
+                        <option value="butterflies">🦋 蝴蝶</option>
+                    </optgroup>
+                    <optgroup label="夢幻效果">
+                        <option value="stars">⭐ 星星</option>
+                        <option value="bubbles">🫧 泡泡</option>
+                        <option value="hearts">💖 愛心</option>
+                        <option value="sparkles">✨ 閃爍</option>
+                    </optgroup>
+                    <optgroup label="節慶效果">
+                        <option value="fireworks" selected>🎆 煙火</option>
+                        <option value="fireworks_big">🎇 煙火（大型）</option>
+                        <option value="fireworks_heart">💖 煙火（愛心）</option>
+                    </optgroup>
+                    <optgroup label="科技效果">
+                        <option value="matrix">🔢 數字雨</option>
+                        <option value="particles">⚛️ 粒子流</option>
+                        <option value="glitch">📺 故障效果</option>
+                        <option value="neon">💎 霓虹</option>
+                    </optgroup>
+                    <optgroup label="魔法效果">
+                        <option value="magic">🪄 魔法粒子</option>
+                        <option value="fairy">🧚 仙女塵</option>
+                        <option value="portal">🌀 傳送門</option>
+                        <option value="runes">🔮 符文</option>
+                    </optgroup>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="intensity">強度: <span id="intensityValue">50</span></label>
+                <input type="range" id="intensity" min="10" max="200" value="50">
+            </div>
+            
+            <div class="control-group">
+                <label for="speed">速度: <span id="speedValue">2</span></label>
+                <input type="range" id="speed" min="0.5" max="5" step="0.1" value="2">
+            </div>
+            
+            <div class="control-group">
+                <label for="size">大小: <span id="sizeValue">3</span></label>
+                <input type="range" id="size" min="1" max="8" step="0.5" value="3">
+            </div>
+
+            <div class="control-group">
+                <label for="colorMode">顏色模式</label>
+                <select id="colorMode">
+                    <option value="default">預設</option>
+                    <option value="rainbow">彩虹</option>
+                    <option value="monochrome">單色</option>
+                    <option value="warm">暖色調</option>
+                    <option value="cool">冷色調</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="blendMode">混合模式</label>
+                <select id="blendMode">
+                    <option value="normal">正常</option>
+                    <option value="multiply">相乘</option>
+                    <option value="screen">濾色</option>
+                    <option value="overlay">覆蓋</option>
+                    <option value="soft-light">柔光</option>
+                    <option value="hard-light">強光</option>
+                    <option value="difference">差異</option>
+                    <option value="exclusion">排除</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>快速設定</label>
+                <button class="upload-btn" id="lowLoadBtn">⚙️ 低負載模式</button>
+            </div>
+        </div>
+
+        <div class="media-container" id="mediaContainer">
+            <img id="mediaElement" style="display: none;">
+            <video id="videoElement" style="display: none;" controls muted loop></video>
+            <canvas id="effectCanvas"></canvas>
+        </div>
+
+        <div class="download-section" id="downloadSection">
+            <div class="download-options">
+                <h3 style="text-align: center; margin-bottom: 20px;">💾 下載選項</h3>
+                
+                <div class="option-group">
+                    <label for="duration">動畫時長: <span id="durationValue">5</span> 秒</label>
+                    <input type="range" id="duration" min="3" max="15" value="5" style="width: 100%;">
+                </div>
+                
+                <div class="option-group">
+                    <label for="fps">幀率 (FPS)</label>
+                    <select id="fps" style="width: 100%;">
+                        <option value="15">15 FPS (檔案較小)</option>
+                        <option value="24" selected>24 FPS (標準)</option>
+                        <option value="30">30 FPS (流暢)</option>
+                        <option value="60">60 FPS (超流暢)</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label for="quality">品質設定</label>
+                    <select id="quality" style="width: 100%;">
+                        <option value="0.3">低品質 (檔案最小)</option>
+                        <option value="0.6">中品質</option>
+                        <option value="0.8" selected>高品質</option>
+                        <option value="1.0">最高品質</option>
+                    </select>
+                </div>
+                
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="progressText" style="text-align: center; margin: 10px 0;"></div>
+                
+                <div style="text-align: center;">
+                    <button class="download-btn" id="downloadGifBtn">🎞️ 下載 GIF 動畫</button>
+                    <button class="download-btn" id="downloadMp4Btn">🎬 下載 WebM 影片</button>
+                    <button class="download-btn" id="downloadImageBtn">🖼️ 下載靜態圖片</button>
+                    
+                </div>
+            </div>
+        </div>
+
+       
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
+    <script>
+        // 強制所有 2D context 使用 willReadFrequently，包含 gif.js 內部建立的 canvas
+        (function() {
+            const originalGetContext = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function(type, options) {
+                if (type === '2d') {
+                    const nextOptions = options && typeof options === 'object' ? {...options} : {};
+                    if (!nextOptions.willReadFrequently) nextOptions.willReadFrequently = true;
+                    return originalGetContext.call(this, type, nextOptions);
+                }
+                return originalGetContext.call(this, type, options);
+            };
+        })();
+    </script>
+    <script>
+        class EnhancedEffectEngine {
+            constructor() {
+                this.canvas = document.getElementById('effectCanvas');
+                this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+                this.particles = [];
+                this.animationId = null;
+                this.effectType = 'fireworks'; // 預設為 fireworks
+                this.intensity = 50;
+                this.speed = 2;
+                this.size = 3;
+                this.colorMode = 'default';
+                this.blendMode = 'normal';
+                this.isImage = true;
+                this.mediaElement = null;
+                this.time = 0;
+                
+                // 特效相關屬性
+                this.lightningFlashes = [];
+                this.magicTrails = [];
+                this.runeRotations = [];
+                // 修正：用於煙火生成計時器，用於控制即時爆炸的頻率
+                this.fireworkSpawnTimer = 0; 
+                
+                // ffmpeg core base URL（會在載入時動態決定）
+                this.ffmpegCoreBase = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js';
+
+                this.setupEventListeners();
+            }
+            
+            async loadFFmpegScript() {
+                if (window.FFmpeg || window.createFFmpeg) return;
+                // 允許手動指定（例如在 GitHub Pages 子路徑）
+                const manualScript = (window.FFMPEG_SCRIPT_URL || (window.FFMPEG_BASE_URL && window.FFMPEG_BASE_URL + '/ffmpeg.min.js')) || null;
+                const manualCore = (window.FFMPEG_CORE_URL || (window.FFMPEG_BASE_URL && window.FFMPEG_BASE_URL + '/ffmpeg-core.js')) || null;
+
+                // 從目前網址自動推測 GitHub Pages 子路徑，例如 /effect002/
+                let inferredBase = '';
+                try {
+                    const parts = (location.pathname || '').split('/').filter(Boolean);
+                    if (parts.length >= 1) {
+                        inferredBase = `/${parts[0]}`; // 例如 /effect002
+                    }
+                } catch(_) {}
+
+                const candidates = [
+                    // 使用者自訂優先
+                    ...(manualScript ? [{ script: manualScript, core: manualCore || manualScript.replace('ffmpeg.min.js', 'ffmpeg-core.js') }] : []),
+                    {
+                        script: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js',
+                        core: 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js'
+                    },
+                    {
+                        script: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js',
+                        core: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js'
+                    },
+                    {
+                        script: 'https://esm.run/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js',
+                        core: 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js'
+                    },
+                    // 本機相對路徑（頁面在子資料夾時嘗試多層）
+                    { script: './libs/ffmpeg/ffmpeg.min.js', core: './libs/ffmpeg/ffmpeg-core.js' },
+                    { script: 'libs/ffmpeg/ffmpeg.min.js', core: 'libs/ffmpeg/ffmpeg-core.js' },
+                    { script: '../libs/ffmpeg/ffmpeg.min.js', core: '../libs/ffmpeg/ffmpeg-core.js' },
+                    { script: '../../libs/ffmpeg/ffmpeg.min.js', core: '../../libs/ffmpeg/ffmpeg-core.js' },
+                    // 站台根目錄（本機開發可用；GitHub Pages 若有專案子路徑則可能無效）
+                    { script: '/libs/ffmpeg/ffmpeg.min.js', core: '/libs/ffmpeg/ffmpeg-core.js' },
+                    // GitHub Pages 專案子路徑（自動推測）
+                    ...(inferredBase ? [{ script: `${inferredBase}/libs/ffmpeg/ffmpeg.min.js`, core: `${inferredBase}/libs/ffmpeg/ffmpeg-core.js` }] : [])
+                ];
+                const tryLoad = (src) => new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = src;
+                    s.async = true;
+                    s.onload = () => resolve(true);
+                    s.onerror = () => reject(new Error('Failed to load ' + src));
+                    document.head.appendChild(s);
+                });
+                let lastError = null;
+                for (const c of candidates) {
+                    try {
+                        await tryLoad(c.script);
+                        this.ffmpegCoreBase = c.core;
+                        this.updateFfmpegStatus(`FFmpeg 來源：${c.script}`);
+                        return;
+                    } catch (e) {
+                        lastError = e;
+                        this.updateFfmpegStatus(`載入失敗：${c.script}`);
+                    }
+                }
+                throw lastError || new Error('Failed to load ffmpeg script');
+            }
+
+            async ensureFFmpeg() {
+                if (this.ffmpeg && this.ffmpeg.isLoaded) return;
+                if (!window.FFmpeg && !window.createFFmpeg) {
+                    await this.loadFFmpegScript();
+                }
+                const createFFmpeg = (window.FFmpeg && window.FFmpeg.createFFmpeg) || window.createFFmpeg;
+                if (!createFFmpeg) throw new Error('FFmpeg library not loaded');
+                this.ffmpeg = createFFmpeg({
+                    log: false,
+                    corePath: this.ffmpegCoreBase
+                });
+                try {
+                    await this.ffmpeg.load();
+                    this.updateFfmpegStatus(`FFmpeg core OK：${this.ffmpegCoreBase}`);
+                } catch (e) {
+                    this.updateFfmpegStatus(`FFmpeg core 載入失敗：${this.ffmpegCoreBase}`);
+                    throw e;
+                }
+            }
+
+            updateFfmpegStatus(text) {
+                const el = document.getElementById('ffmpegStatus');
+                if (!el) return;
+                const now = new Date();
+                const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                const line = document.createElement('div');
+                line.textContent = `[${time}] ${text}`;
+                el.appendChild(line);
+            }
+            
+            async convertGifToWebm(gifBlob) {
+                await this.ensureFFmpeg();
+                const data = new Uint8Array(await gifBlob.arrayBuffer());
+                try { this.ffmpeg.FS('unlink', 'input.gif'); } catch(_) {}
+                try { this.ffmpeg.FS('unlink', 'output.webm'); } catch(_) {}
+                this.ffmpeg.FS('writeFile', 'input.gif', data);
+                // 將 GIF 轉為 WebM（較寬鬆、速度優先）：VP8 + realtime，必要時可縮放/降 FPS
+                // 自動偵測幀率與尺寸；如需限制，可在此加入 -vf scale=... 或 -r ...
+                await this.ffmpeg.run(
+                    '-i', 'input.gif',
+                    '-c:v', 'libvpx',
+                    '-b:v', '1.5M',
+                    '-deadline', 'realtime',
+                    '-pix_fmt', 'yuv420p',
+                    '-an',
+                    'output.webm'
+                );
+                const out = this.ffmpeg.FS('readFile', 'output.webm');
+                return new Blob([out.buffer], { type: 'video/webm' });
+            }
+            
+            setupEventListeners() {
+                const fileInput = document.getElementById('fileInput');
+                const uploadArea = document.getElementById('uploadArea');
+                const effectType = document.getElementById('effectType');
+                const intensity = document.getElementById('intensity');
+                const speed = document.getElementById('speed');
+                const size = document.getElementById('size');
+                const colorMode = document.getElementById('colorMode');
+                const blendMode = document.getElementById('blendMode');
+                const downloadGifBtn = document.getElementById('downloadGifBtn');
+                const downloadMp4Btn = document.getElementById('downloadMp4Btn');
+                const downloadImageBtn = document.getElementById('downloadImageBtn');
+                const convertMp4Btn = document.getElementById('convertMp4Btn');
+                const duration = document.getElementById('duration');
+                const lowLoadBtn = document.getElementById('lowLoadBtn');
+                
+                // File upload
+                fileInput.addEventListener('change', (e) => this.handleFile(e.target.files[0]));
+                
+                // Drag and drop
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    this.handleFile(e.dataTransfer.files[0]);
+                });
+                
+                // Controls
+                effectType.addEventListener('change', (e) => {
+                    this.effectType = e.target.value;
+                    this.initParticles();
+                });
+                
+                intensity.addEventListener('input', (e) => {
+                    this.intensity = parseInt(e.target.value);
+                    document.getElementById('intensityValue').textContent = e.target.value;
+                    this.initParticles();
+                });
+                
+                speed.addEventListener('input', (e) => {
+                    this.speed = parseFloat(e.target.value);
+                    document.getElementById('speedValue').textContent = e.target.value;
+                });
+                
+                size.addEventListener('input', (e) => {
+                    this.size = parseFloat(e.target.value);
+                    document.getElementById('sizeValue').textContent = e.target.value;
+                });
+                
+                colorMode.addEventListener('change', (e) => {
+                    this.colorMode = e.target.value;
+                });
+                
+                blendMode.addEventListener('change', (e) => {
+                    this.blendMode = e.target.value;
+                });
+                
+                duration.addEventListener('input', (e) => {
+                    document.getElementById('durationValue').textContent = e.target.value;
+                });
+                
+                // Download buttons
+                downloadGifBtn.addEventListener('click', () => this.downloadGif());
+                downloadMp4Btn.addEventListener('click', () => this.downloadMp4()); // 此按鈕名稱為 WebM 下載
+                downloadImageBtn.addEventListener('click', () => this.downloadImage());
+                
+
+                // 快速低負載設定
+                if (lowLoadBtn) {
+                    lowLoadBtn.addEventListener('click', () => {
+                        // 基本畫面參數
+                        intensity.value = 30; this.intensity = 30; document.getElementById('intensityValue').textContent = '30';
+                        size.value = 3; this.size = 3; document.getElementById('sizeValue').textContent = '3';
+                        speed.value = 2; this.speed = 2; document.getElementById('speedValue').textContent = '2';
+                        colorMode.value = 'default'; this.colorMode = 'default';
+                        blendMode.value = 'normal'; this.blendMode = 'normal';
+                        
+                        // 下載參數
+                        const fpsSel = document.getElementById('fps'); if (fpsSel) fpsSel.value = '15';
+                        duration.value = 3; document.getElementById('durationValue').textContent = '3';
+                        const qualitySel = document.getElementById('quality'); if (qualitySel) qualitySel.value = '0.6';
+                        
+                        // 重新產生粒子
+                        this.initParticles();
+                    });
+                }
+            }
+            
+            async handleFile(file) {
+                if (!file) return;
+                
+                const mediaContainer = document.getElementById('mediaContainer');
+                const imgElement = document.getElementById('mediaElement');
+                const videoElement = document.getElementById('videoElement');
+                const downloadSection = document.getElementById('downloadSection');
+                
+                downloadSection.style.display = 'block';
+
+                // 動態 GIF：先轉為 WebM，再走影片流程，保留原本動態
+                if (file.type === 'image/gif') {
+                    try {
+                        this.setButtonsState(true);
+                        this.showProgress('正在將 GIF 轉為影片以保留動態...');
+                        const webmBlob = await this.convertGifToWebm(file);
+                        const url = URL.createObjectURL(webmBlob);
+                        this.isImage = false;
+                        this.mediaElement = videoElement;
+                        videoElement.src = url;
+                        videoElement.style.display = 'block';
+                        imgElement.style.display = 'none';
+                        videoElement.onloadedmetadata = () => {
+                            this.setupCanvas();
+                            this.initParticles();
+                            this.animate();
+                            videoElement.play();
+                            // 保留 URL 至少到離開頁面；如需釋放可在切換檔案時 revoke
+                        };
+                    } catch (e) {
+                        console.error('GIF 轉 WebM 失敗：', e);
+                        alert('GIF 轉換失敗，將以靜態圖片顯示。可嘗試低負載模式或改傳影片。');
+                        // 轉換失敗則退回原本圖片流程（會是靜態）
+                    } finally {
+                        this.hideProgress();
+                        this.setButtonsState(false);
+                    }
+                    mediaContainer.style.display = 'block';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (file.type.startsWith('image/')) {
+                        this.isImage = true;
+                        this.mediaElement = imgElement;
+                        imgElement.src = e.target.result;
+                        imgElement.style.display = 'block';
+                        videoElement.style.display = 'none';
+                        videoElement.pause();
+                        
+                        imgElement.onload = () => {
+                            this.setupCanvas();
+                            this.initParticles();
+                            this.animate();
+                        };
+                    } else if (file.type.startsWith('video/')) {
+                        this.isImage = false;
+                        this.mediaElement = videoElement;
+                        videoElement.src = e.target.result;
+                        videoElement.style.display = 'block';
+                        imgElement.style.display = 'none';
+                        
+                        videoElement.onloadedmetadata = () => {
+                            this.setupCanvas();
+                            this.initParticles();
+                            this.animate();
+                            videoElement.play();
+                        };
+                    }
+                };
+                reader.readAsDataURL(file);
+                mediaContainer.style.display = 'block';
+            }
+            
+            setupCanvas() {
+                this.mediaElement = this.isImage ? 
+                    document.getElementById('mediaElement') : 
+                    document.getElementById('videoElement');
+                
+                const container = document.getElementById('mediaContainer');
+                const targetWidth = (container && container.clientWidth) || this.mediaElement.offsetWidth || 300;
+                const targetHeight = (container && container.clientHeight) || this.mediaElement.offsetHeight || 300;
+                
+                this.canvas.width = targetWidth;
+                this.canvas.height = targetHeight;
+            }
+            
+            getParticleColor(particle, baseColor = null) {
+                const { colorMode } = this;
+                let color = baseColor || 'white';
+                
+                switch (colorMode) {
+                    case 'rainbow':
+                        const hue = (particle.hue || 0) + this.time * 0.5;
+                        color = `hsl(${hue % 360}, 70%, 60%)`;
+                        break;
+                    case 'monochrome':
+                        const gray = Math.random() * 100 + 50;
+                        color = `hsl(0, 0%, ${gray}%)`;
+                        break;
+                    case 'warm':
+                        const warmHue = Math.random() * 60 + 300; // 紅-橙-黃
+                        color = `hsl(${warmHue}, 70%, 60%)`;
+                        break;
+                    case 'cool':
+                        const coolHue = Math.random() * 120 + 180; // 藍-綠-青
+                        color = `hsl(${coolHue}, 70%, 60%)`;
+                        break;
+                }
+                
+                return color;
+            }
+            
+            // --- 煙火特效的獨立輔助函式 ---
+
+            // 創建一個火箭粒子 (Rocket)
+            createRocket(explosionStyle = 'default') {
+                return {
+                    kind: 'rocket',
+                    x: this.canvas.width * (0.1 + Math.random() * 0.8), // 隨機水平位置
+                    y: this.canvas.height + 50, // 屏幕下方開始
+                    vx: (Math.random() - 0.5) * 0.8,
+                    vy: - (Math.random() * (2 + this.speed) * 0.8 + 4), // 初始上升速度
+                    size: Math.random() * 1.5 + 1.5,
+                    opacity: 1,
+                    color: `hsl(${Math.floor(Math.random() * 360)}, 80%, 60%)`, // 隨機顏色
+                    targetY: this.canvas.height * (0.1 + Math.random() * 0.4), // 隨機爆炸高度
+                    trail: [],
+                    explosionStyle: explosionStyle
+                };
+            }
+
+            // 創建一個爆炸火花粒子 (Spark)
+            createSpark(x, y, color, angle, velocity, life, size) {
+                return {
+                    kind: 'spark',
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * velocity,
+                    vy: Math.sin(angle) * velocity,
+                    size: size,
+                    opacity: 1,
+                    color: color,
+                    life: life,
+                    maxLife: life
+                };
+            }
+
+            // 根據火箭資訊生成爆炸火花
+            createExplosion(rocket) {
+                const sparks = [];
+                // 火花數量根據強度和類型決定
+                const numSparks = rocket.explosionStyle === 'big' ? Math.floor(this.intensity * 0.5) + 50 : Math.floor(this.intensity * 0.3) + 30;
+                const baseVelocity = 3 + (this.speed * 0.5);
+                const sparkColor = rocket.color; // 沿用火箭顏色
+
+                if (rocket.explosionStyle === 'heart') {
+                    // 愛心形狀爆炸
+                    for (let i = 0; i < numSparks; i++) {
+                        const t = i / numSparks * Math.PI * 2;
+                        
+                        // 愛心參數方程式
+                        let x = 16 * Math.pow(Math.sin(t), 3);
+                        let y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                        
+                        // 轉換為角度和速度
+                        const angle = Math.atan2(y, x);
+                        const distance = Math.hypot(x, y);
+
+                        const velocityScale = Math.random() * 0.5 + 0.5;
+                        const velocity = baseVelocity * 0.15 + (distance * 0.05); // 讓外圈速度快一點
+
+                        sparks.push(this.createSpark(
+                            rocket.x, 
+                            rocket.y, 
+                            sparkColor, 
+                            angle, 
+                            velocity * velocityScale, 
+                            Math.random() * 40 + 60,
+                            Math.random() * 1.5 + 1
+                        ));
+                    }
+                } else {
+                    // 標準或大型圓形爆炸
+                    for (let i = 0; i < numSparks; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const velocity = baseVelocity * (Math.random() * 0.5 + 0.5);
+                        const life = Math.random() * 50 + 70;
+                        const size = Math.random() * 1.5 + 1;
+
+                        sparks.push(this.createSpark(
+                            rocket.x, 
+                            rocket.y, 
+                            sparkColor, 
+                            angle, 
+                            velocity, 
+                            life,
+                            size
+                        ));
+                    }
+                }
+
+                // 將火花加入到粒子陣列中
+                this.particles.push(...sparks);
+            }
+            
+            // --- 粒子初始化 ---
+            
+            initParticles() {
+                this.particles = [];
+                this.lightningFlashes = [];
+                this.magicTrails = [];
+                this.runeRotations = [];
+                this.fireworkSpawnTimer = 0;
+                
+                // 設定煙火爆炸樣式
+                let explosionStyle = 'default';
+                if (this.effectType === 'fireworks_big') explosionStyle = 'big';
+                if (this.effectType === 'fireworks_heart') explosionStyle = 'heart';
+                
+                // Fireworks 初始化
+                if (this.effectType === 'fireworks') {
+                    // 🎆 煙火：無火箭，只使用計時器在空中生成爆炸
+                    this.fireworkSpawnTimer = 1; 
+                } else if (this.effectType.startsWith('fireworks')) {
+                    // 🎇/💖 煙火：保留火箭上升的邏輯
+                    const rocketCount = Math.max(3, Math.floor(this.intensity / 5)); 
+                    for (let i = 0; i < rocketCount; i++) {
+                        this.particles.push(this.createRocket(explosionStyle));
+                    }
+                } else {
+                    // 初始化其他特效的粒子
+                    for (let i = 0; i < this.intensity; i++) {
+                        this.particles.push(this.createParticle());
+                    }
+                }
+                
+                // 初始化符文旋轉角度
+                if (this.effectType === 'runes') {
+                    for (let i = 0; i < this.intensity; i++) {
+                        this.runeRotations.push(Math.random() * Math.PI * 2);
+                    }
+                }
+            }
+            
+            // 創建一般粒子 (非煙火)
+            createParticle() {
+                const particle = {
+                    x: Math.random() * this.canvas.width,
+                    y: Math.random() * this.canvas.height - this.canvas.height,
+                    vx: 0,
+                    vy: 0,
+                    size: Math.random() * this.size + 1,
+                    opacity: Math.random() * 0.8 + 0.2,
+                    angle: 0,
+                    hue: Math.random() * 360,
+                    life: 1,
+                    maxLife: 1,
+                    trail: [],
+                    kind: 'default'
+                };
+                
+                // ... 略過其他特效的初始化邏輯 (與上一個版本相同)
+                switch (this.effectType) {
+                    case 'snow':
+                        particle.vx = (Math.random() - 0.5) * 0.5;
+                        particle.vy = Math.random() * this.speed + 0.5;
+                        break;
+                    case 'rain':
+                        particle.vx = Math.random() * 2 - 1;
+                        particle.vy = Math.random() * this.speed + 3;
+                        particle.size = Math.random() * 2 + 1;
+                        break;
+                    case 'storm':
+                        particle.vx = Math.random() * 4 - 2;
+                        particle.vy = Math.random() * this.speed + 5;
+                        particle.size = Math.random() * 3 + 1;
+                        break;
+                    case 'lightning':
+                        particle.vx = 0;
+                        particle.vy = 0;
+                        particle.life = Math.random() * 0.3 + 0.1;
+                        particle.maxLife = particle.life;
+                        break;
+                    case 'leaves':
+                        particle.vx = (Math.random() - 0.5) * 0.5;
+                        particle.vy = Math.random() * this.speed + 1;
+                        particle.angle = Math.random() * Math.PI * 2;
+                        break;
+                    case 'sakura':
+                        particle.vx = Math.random() * 1 - 0.5;
+                        particle.vy = Math.random() * this.speed + 0.5;
+                        particle.angle = Math.random() * Math.PI * 2;
+                        break;
+                    case 'fireflies':
+                        particle.vx = (Math.random() - 0.5) * 2;
+                        particle.vy = (Math.random() - 0.5) * 2;
+                        particle.glowIntensity = Math.random();
+                        break;
+                    case 'butterflies':
+                        particle.vx = Math.random() * 2 - 1;
+                        particle.vy = Math.random() * this.speed + 0.5;
+                        particle.wingPhase = Math.random() * Math.PI * 2;
+                        break;
+                    case 'stars':
+                        particle.vx = (Math.random() - 0.5) * 0.2;
+                        particle.vy = Math.random() * this.speed * 0.5 + 0.2;
+                        particle.twinkle = Math.random() * Math.PI * 2;
+                        break;
+                    case 'bubbles':
+                        particle.vx = (Math.random() - 0.5) * 1;
+                        particle.vy = -Math.random() * this.speed - 0.5;
+                        particle.size = Math.random() * this.size + 2;
+                        break;
+                    case 'hearts':
+                        particle.vx = (Math.random() - 0.5) * 1;
+                        particle.vy = Math.random() * this.speed + 0.5;
+                        particle.pulse = Math.random() * Math.PI * 2;
+                        particle.size = Math.random() * 4 + 4; // 愛心預設值增大
+                        break;
+                    case 'sparkles':
+                        particle.vx = (Math.random() - 0.5) * 2;
+                        particle.vy = (Math.random() - 0.5) * 2;
+                        particle.sparklePhase = Math.random() * Math.PI * 2;
+                        break;
+                    case 'matrix':
+                        particle.vx = 0;
+                        particle.vy = Math.random() * this.speed + 2;
+                        particle.char = String.fromCharCode(0x30A0 + Math.random() * 96);
+                        break;
+                    case 'particles':
+                        const angle = Math.random() * Math.PI * 2;
+                        particle.vx = Math.cos(angle) * this.speed;
+                        particle.vy = Math.sin(angle) * this.speed;
+                        break;
+                    case 'glitch':
+                        particle.vx = (Math.random() - 0.5) * 10;
+                        particle.vy = (Math.random() - 0.5) * 10;
+                        particle.life = Math.random() * 0.2 + 0.1;
+                        particle.maxLife = particle.life;
+                        break;
+                    case 'neon':
+                        particle.vx = (Math.random() - 0.5) * 1;
+                        particle.vy = Math.random() * this.speed + 1;
+                        particle.glowSize = Math.random() * 10 + 5;
+                        break;
+                    case 'magic':
+                        particle.vx = (Math.random() - 0.5) * 3;
+                        particle.vy = (Math.random() - 0.5) * 3;
+                        particle.trail = [];
+                        break;
+                    case 'fairy':
+                        particle.vx = (Math.random() - 0.5) * 2;
+                        particle.vy = -Math.random() * this.speed - 0.5;
+                        particle.shimmer = Math.random() * Math.PI * 2;
+                        break;
+                    case 'portal':
+                        const radius = Math.random() * 100 + 50;
+                        const portalAngle = Math.random() * Math.PI * 2;
+                        particle.x = this.canvas.width / 2 + Math.cos(portalAngle) * radius;
+                        particle.y = this.canvas.height / 2 + Math.sin(portalAngle) * radius;
+                        particle.vx = -Math.cos(portalAngle) * this.speed;
+                        particle.vy = -Math.sin(portalAngle) * this.speed;
+                        break;
+                    case 'runes':
+                        particle.vx = (Math.random() - 0.5) * 0.5;
+                        particle.vy = Math.random() * this.speed + 0.5;
+                        particle.runeType = Math.floor(Math.random() * 6);
+                        break;
+                }
+                return particle;
+            }
+            
+            updateParticle(particle, index) {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+
+                // 特效特殊更新邏輯
+                switch (this.effectType) {
+                    case 'fireworks_big':
+                    case 'fireworks_heart':
+                        if (particle.kind === 'rocket') {
+                            // 火箭上升和重力 (減速)
+                            particle.vy += 0.08; 
+                            
+                            // 拖尾管理
+                            particle.trail.push({ x: particle.x, y: particle.y, life: 1, color: particle.color });
+                            particle.trail = particle.trail.filter(t => (t.life -= 0.05) > 0); 
+
+                            // 爆炸判斷: 到達目標高度或開始明顯下墜 (vy > 1)
+                            if (particle.y <= particle.targetY || particle.vy > 1) { 
+                                // 1. 創建爆炸火花
+                                this.createExplosion(particle);
+                                
+                                // 2. 重設火箭狀態，準備下一次發射
+                                const newRocket = this.createRocket(particle.explosionStyle);
+                                Object.assign(particle, newRocket); 
+                                return;
+                            }
+                        } else if (particle.kind === 'spark') {
+                            // 火花受重力和摩擦影響
+                            particle.vy += 0.04; // 重力
+                            particle.vx *= 0.98; // 摩擦
+                            particle.vy *= 0.98; // 摩擦
+                            
+                            // 逐漸淡出
+                            particle.life -= 1;
+                            particle.opacity = particle.life / particle.maxLife; 
+                            
+                            // 移除死亡的火花
+                            if (particle.life <= 0) {
+                                this.particles.splice(index, 1);
+                                return; // 已移除，結束處理
+                            }
+                        }
+                        break; // <-- 結束 fireworks_big/heart 的邏輯
+
+                    case 'fireworks': // <-- 🎆 煙火：只有火花
+                        if (particle.kind === 'spark') {
+                            // 火花受重力和摩擦影響 (與其他煙火火花一樣)
+                            particle.vy += 0.04; // 重力
+                            particle.vx *= 0.98; // 摩擦
+                            particle.vy *= 0.98; // 摩擦
+                            
+                            // 逐漸淡出
+                            particle.life -= 1;
+                            particle.opacity = particle.life / particle.maxLife; 
+                            
+                            // 移除死亡的火花
+                            if (particle.life <= 0) {
+                                this.particles.splice(index, 1);
+                                return; 
+                            }
+                        } else {
+                            // 確保非火花粒子被移除 (雖然不應該出現)
+                            this.particles.splice(index, 1);
+                            return;
+                        }
+                        break;
+
+                    // ... 略過其他特效的更新邏輯 (與上一個版本相同)
+                    case 'leaves':
+                    case 'sakura':
+                        particle.angle += 0.02;
+                        particle.x += Math.sin(particle.angle) * 0.5;
+                        break;
+                    case 'fireflies':
+                        particle.vx += (Math.random() - 0.5) * 0.1;
+                        particle.vy += (Math.random() - 0.5) * 0.1;
+                        particle.glowIntensity = Math.sin(this.time * 0.1 + index) * 0.5 + 0.5;
+                        break;
+                    case 'butterflies':
+                        particle.wingPhase += 0.3;
+                        particle.vy += Math.sin(particle.wingPhase) * 0.1;
+                        break;
+                    case 'stars':
+                        particle.twinkle += 0.1;
+                        break;
+                    case 'hearts':
+                        particle.pulse += 0.1;
+                        break;
+                    case 'sparkles':
+                        particle.sparklePhase += 0.2;
+                        break;
+                    case 'lightning':
+                        particle.life -= 0.02;
+                        if (particle.life <= 0) {
+                            particle.life = Math.random() * 0.3 + 0.1;
+                            particle.maxLife = particle.life;
+                            particle.x = Math.random() * this.canvas.width;
+                            particle.y = Math.random() * this.canvas.height;
+                        }
+                        break;
+                    case 'matrix':
+                        if (particle.y > this.canvas.height) {
+                            particle.y = 0;
+                            particle.char = String.fromCharCode(0x30A0 + Math.random() * 96);
+                        }
+                        break;
+                    case 'particles':
+                        particle.life -= 0.01;
+                        if (particle.life <= 0) {
+                            particle.life = 1;
+                            particle.x = this.canvas.width / 2;
+                            particle.y = this.canvas.height / 2;
+                            const angle = Math.random() * Math.PI * 2;
+                            particle.vx = Math.cos(angle) * this.speed;
+                            particle.vy = Math.sin(angle) * this.speed;
+                        }
+                        break;
+                    case 'glitch':
+                        particle.life -= 0.05;
+                        if (particle.life <= 0) {
+                            particle.life = Math.random() * 0.2 + 0.1;
+                            particle.maxLife = particle.life;
+                            particle.x = Math.random() * this.canvas.width;
+                            particle.y = Math.random() * this.canvas.height;
+                        }
+                        break;
+                    case 'neon':
+                        if (particle.y > this.canvas.height) {
+                            particle.y = Math.random() * 10 - 10;
+                            particle.x = Math.random() * this.canvas.width;
+                        }
+                        break;
+                    case 'magic':
+                        if (particle.trail.length > 10) particle.trail.shift();
+                        particle.trail.push({ x: particle.x, y: particle.y, life: 1 });
+                        particle.vx *= 0.98;
+                        particle.vy *= 0.98;
+                        particle.vx += (Math.random() - 0.5) * 0.1;
+                        particle.vy += (Math.random() - 0.5) * 0.1;
+                        break;
+                    case 'fairy':
+                        particle.shimmer += 0.1;
+                        if (particle.y < 0) {
+                            particle.y = this.canvas.height + 10;
+                            particle.x = Math.random() * this.canvas.width;
+                        }
+                        break;
+                    case 'portal':
+                        const centerX = this.canvas.width / 2;
+                        const centerY = this.canvas.height / 2;
+                        const dist = Math.hypot(particle.x - centerX, particle.y - centerY);
+                        if (dist < 50) {
+                            const radius = Math.random() * 100 + 50;
+                            const portalAngle = Math.random() * Math.PI * 2;
+                            particle.x = centerX + Math.cos(portalAngle) * radius;
+                            particle.y = centerY + Math.sin(portalAngle) * radius;
+                            particle.vx = -Math.cos(portalAngle) * this.speed;
+                            particle.vy = -Math.sin(portalAngle) * this.speed;
+                        }
+                        break;
+                    case 'runes':
+                        this.runeRotations[index] += 0.01 + this.speed * 0.005;
+                        break;
+                }
+                
+                // 通用重設邏輯 (排除煙火火箭/火花)
+                if (!this.effectType.startsWith('fireworks') && particle.kind !== 'spark') {
+                    if (particle.y > this.canvas.height + 50 || particle.x < -50 || particle.x > this.canvas.width + 50) {
+                        Object.assign(particle, this.createParticle());
+                        particle.y = Math.random() * 50 - 50; // 從頂部附近重新生成
+                    }
+                }
+            }
+            
+            drawParticle(particle, index) {
+                this.ctx.globalAlpha = particle.opacity;
+                this.ctx.fillStyle = this.getParticleColor(particle);
+                this.ctx.strokeStyle = this.getParticleColor(particle);
+
+                // --- 煙火繪圖邏輯 ---
+                if (this.effectType.startsWith('fireworks')) {
+                    if (particle.kind === 'rocket') {
+                        // 繪製火箭主體 (圓形)
+                        this.ctx.globalAlpha = 1; 
+                        this.ctx.fillStyle = particle.color;
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // 繪製拖尾
+                        this.ctx.lineWidth = particle.size * 0.75;
+                        this.ctx.lineCap = 'round';
+                        for (let i = 0; i < particle.trail.length; i++) {
+                            const t = particle.trail[i];
+                            // 讓拖尾顏色更亮
+                            const trailColor = t.color.replace('80%', '95%').replace('60%', '75%'); 
+                            this.ctx.globalAlpha = t.life * 0.6;
+                            this.ctx.strokeStyle = trailColor;
+                            if (i > 0) {
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(particle.trail[i-1].x, particle.trail[i-1].y);
+                                this.ctx.lineTo(t.x, t.y);
+                                this.ctx.stroke();
+                            }
+                        }
+                    } else if (particle.kind === 'spark') {
+                        // 繪製爆炸火花 (帶有殘影/輝光)
+                        this.ctx.globalAlpha = particle.opacity * 0.8; 
+                        this.ctx.fillStyle = particle.color;
+                        
+                        this.ctx.shadowBlur = 5;
+                        this.ctx.shadowColor = particle.color;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.shadowBlur = 0; // 重置陰影
+                    }
+                    this.ctx.globalAlpha = 1;
+                    return;
+                }
+                // --- 其他特效繪圖邏輯 (與上一個版本相同) ---
+                switch (this.effectType) {
+                    case 'snow':
+                    case 'rain':
+                    case 'storm':
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    case 'leaves':
+                    case 'sakura':
+                        this.ctx.save();
+                        this.ctx.translate(particle.x, particle.y);
+                        this.ctx.rotate(particle.angle);
+                        this.ctx.fillRect(-particle.size, -particle.size * 0.5, particle.size * 2, particle.size);
+                        this.ctx.restore();
+                        break;
+                    case 'fireflies':
+                        const glowRadius = particle.size * 3 + particle.glowIntensity * 5;
+                        const radialGradient = this.ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, glowRadius);
+                        radialGradient.addColorStop(0, `rgba(255, 255, 100, ${particle.glowIntensity * 0.6})`);
+                        radialGradient.addColorStop(0.5, `rgba(255, 255, 100, ${particle.glowIntensity * 0.1})`);
+                        radialGradient.addColorStop(1, 'rgba(255, 255, 100, 0)');
+                        this.ctx.fillStyle = radialGradient;
+                        this.ctx.fillRect(particle.x - glowRadius, particle.y - glowRadius, glowRadius * 2, glowRadius * 2);
+
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgb(255, 255, 150)');
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    case 'butterflies':
+                        this.ctx.save();
+                        this.ctx.translate(particle.x, particle.y);
+                        this.ctx.rotate(Math.sin(this.time * 0.1) * 0.5);
+                        this.ctx.fillStyle = this.getParticleColor(particle);
+                        const wingSize = particle.size * (1 + Math.sin(particle.wingPhase) * 0.3);
+                        // 畫蝴蝶身體
+                        this.ctx.fillRect(-1, -particle.size, 2, particle.size * 2);
+                        // 畫左翅膀
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, 0);
+                        this.ctx.lineTo(-wingSize * 2, -wingSize);
+                        this.ctx.lineTo(-wingSize * 2, wingSize);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        // 畫右翅膀
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, 0);
+                        this.ctx.lineTo(wingSize * 2, -wingSize);
+                        this.ctx.lineTo(wingSize * 2, wingSize);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        this.ctx.restore();
+                        break;
+                    case 'stars':
+                        const twinkle = Math.sin(particle.twinkle) * 0.5 + 0.5;
+                        this.ctx.globalAlpha = twinkle * particle.opacity;
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgb(255, 255, 200)');
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(particle.x + particle.size, particle.y);
+                        for (let i = 0; i < 5; i++) {
+                            const outerAngle = i * Math.PI * 0.4 - Math.PI * 0.5;
+                            const innerAngle = outerAngle + Math.PI * 0.2;
+                            this.ctx.lineTo(particle.x + Math.cos(outerAngle) * particle.size, particle.y + Math.sin(outerAngle) * particle.size);
+                            this.ctx.lineTo(particle.x + Math.cos(innerAngle) * particle.size * 0.5, particle.y + Math.sin(innerAngle) * particle.size * 0.5);
+                        }
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        break;
+                    case 'bubbles':
+                        this.ctx.lineWidth = 1;
+                        this.ctx.globalAlpha = particle.opacity * 0.8;
+                        this.ctx.strokeStyle = this.getParticleColor(particle, 'rgba(200, 220, 255, 0.8)');
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                        this.ctx.globalAlpha = particle.opacity * 0.1;
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgba(255, 255, 255, 0.8)');
+                        this.ctx.fill();
+                        break;
+                    case 'hearts':
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgb(255, 100, 150)');
+                        this.ctx.globalAlpha = particle.opacity;
+                        this.ctx.save();
+                        this.ctx.translate(particle.x, particle.y);
+                        const scale = particle.size * (1 + Math.sin(particle.pulse) * 0.1) * 0.1;
+                        this.ctx.scale(scale, scale);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, -5);
+                        this.ctx.bezierCurveTo(5, -15, 20, -10, 0, 10);
+                        this.ctx.bezierCurveTo(-20, -10, -5, -15, 0, -5);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        this.ctx.restore();
+                        break;
+                    case 'sparkles':
+                        this.ctx.globalAlpha = particle.opacity * (Math.sin(particle.sparklePhase) * 0.5 + 0.5);
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgb(255, 255, 255)');
+                        this.ctx.beginPath();
+                        this.ctx.rect(particle.x - particle.size / 2, particle.y - particle.size / 2, particle.size, particle.size);
+                        this.ctx.fill();
+                        break;
+                    case 'matrix':
+                        this.ctx.font = `${particle.size * 2}px monospace`;
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgba(0, 255, 70, 0.8)');
+                        this.ctx.fillText(particle.char, particle.x, particle.y);
+                        break;
+                    case 'particles':
+                        this.ctx.globalAlpha = particle.opacity * particle.life;
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    case 'glitch':
+                        this.ctx.globalAlpha = particle.opacity * particle.life;
+                        this.ctx.fillStyle = this.getParticleColor(particle);
+                        this.ctx.fillRect(particle.x, particle.y, particle.size * 5, particle.size * 5);
+                        break;
+                    case 'neon':
+                        this.ctx.globalAlpha = particle.opacity;
+                        this.ctx.shadowBlur = particle.glowSize;
+                        this.ctx.shadowColor = this.getParticleColor(particle);
+                        this.ctx.fillStyle = this.getParticleColor(particle);
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.shadowBlur = 0; // 重置陰影
+                        break;
+                    case 'magic':
+                        // 繪製拖尾
+                        this.ctx.lineWidth = particle.size;
+                        this.ctx.lineCap = 'round';
+                        this.ctx.strokeStyle = this.getParticleColor(particle);
+                        this.ctx.globalAlpha = particle.opacity;
+                        this.ctx.beginPath();
+                        if (particle.trail.length > 1) {
+                            this.ctx.moveTo(particle.trail[0].x, particle.trail[0].y);
+                            for (let i = 1; i < particle.trail.length; i++) {
+                                this.ctx.lineTo(particle.trail[i].x, particle.trail[i].y);
+                            }
+                        } else {
+                            this.ctx.moveTo(particle.x, particle.y);
+                            this.ctx.lineTo(particle.x + 0.1, particle.y + 0.1);
+                        }
+                        this.ctx.stroke();
+                        break;
+                    case 'fairy':
+                        const shimmer = Math.sin(particle.shimmer) * 0.5 + 0.5;
+                        this.ctx.globalAlpha = particle.opacity * shimmer;
+                        this.ctx.fillStyle = this.getParticleColor(particle, 'rgba(255, 255, 255, 0.8)');
+                        this.ctx.beginPath();
+                        this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    case 'portal':
+                        this.ctx.globalAlpha = particle.opacity * 0.8;
+                        this.ctx.lineWidth = particle.size;
+                        this.ctx.strokeStyle = this.getParticleColor(particle);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(particle.x, particle.y);
+                        const angle = Math.atan2(particle.y - this.canvas.height / 2, particle.x - this.canvas.width / 2);
+                        this.ctx.lineTo(particle.x + Math.cos(angle) * 5, particle.y + Math.sin(angle) * 5);
+                        this.ctx.stroke();
+                        break;
+                    case 'runes':
+                        this.ctx.save();
+                        this.ctx.translate(particle.x, particle.y);
+                        this.ctx.rotate(this.runeRotations[index]);
+                        this.ctx.globalAlpha = particle.opacity;
+                        this.ctx.strokeStyle = this.getParticleColor(particle);
+                        this.ctx.lineWidth = 2;
+                        
+                        // 簡易符文圖形 (線條)
+                        this.ctx.beginPath();
+                        switch (particle.runeType) {
+                            case 0: // T
+                                this.ctx.moveTo(-particle.size, -particle.size);
+                                this.ctx.lineTo(particle.size, -particle.size);
+                                this.ctx.moveTo(0, -particle.size);
+                                this.ctx.lineTo(0, particle.size);
+                                break;
+                            case 1: // Z
+                                this.ctx.moveTo(-particle.size, -particle.size);
+                                this.ctx.lineTo(particle.size, -particle.size);
+                                this.ctx.lineTo(-particle.size, particle.size);
+                                this.ctx.lineTo(particle.size, particle.size);
+                                break;
+                            case 2: // Triangle
+                                this.ctx.moveTo(0, -particle.size);
+                                this.ctx.lineTo(particle.size * 0.866, particle.size * 0.5);
+                                this.ctx.lineTo(-particle.size * 0.866, particle.size * 0.5);
+                                this.ctx.closePath();
+                                break;
+                            case 3: // Cross
+                                this.ctx.moveTo(-particle.size, -particle.size);
+                                this.ctx.lineTo(particle.size, particle.size);
+                                this.ctx.moveTo(particle.size, -particle.size);
+                                this.ctx.lineTo(-particle.size, particle.size);
+                                break;
+                            case 4: // Circle with dot
+                                this.ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
+                                this.ctx.moveTo(0, 0);
+                                this.ctx.lineTo(0, particle.size * 0.5);
+                                break;
+                            case 5: // Square
+                                this.ctx.rect(-particle.size, -particle.size, particle.size * 2, particle.size * 2);
+                                break;
+                        }
+                        this.ctx.stroke();
+                        this.ctx.restore();
+                        break;
+                }
+                
+                this.ctx.globalAlpha = 1; // 重置透明度
+            }
+            
+            drawMedia() {
+                if (this.mediaElement) {
+                    const { width, height } = this.canvas;
+                    this.ctx.drawImage(this.mediaElement, 0, 0, width, height);
+                }
+            }
+
+            animate = (timestamp) => {
+                if (!this.mediaElement) return;
+
+                this.time += 0.01;
+                
+                // 1. 繪製媒體元素 (圖片或影片幀)
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.drawMedia();
+                
+                // 2. 設定混合模式
+                this.ctx.globalCompositeOperation = this.blendMode;
+
+                // --- 🎆 煙火（直接爆炸）生成邏輯 ---
+                if (this.effectType === 'fireworks') {
+                    this.fireworkSpawnTimer -= 1;
+                    // 爆炸頻率：強度越高，間隔越小 (範圍 20~100)
+                    const maxSpawnInterval = 100 - Math.min(80, this.intensity * 0.4); 
+                    
+                    if (this.fireworkSpawnTimer <= 0) {
+                        // 在空中隨機位置生成爆炸 (Y: 畫布頂部 10% 到 40% 之間)
+                        const explosionY = this.canvas.height * (0.1 + Math.random() * 0.3); 
+                        const rocketPlaceholder = { 
+                            kind: 'rocket', // 假裝是火箭，用於傳遞參數給 createExplosion
+                            x: this.canvas.width * (0.1 + Math.random() * 0.8),
+                            y: explosionY,
+                            color: `hsl(${Math.floor(Math.random() * 360)}, 80%, 60%)`, // 隨機顏色
+                            explosionStyle: 'default' 
+                        };
+                        this.createExplosion(rocketPlaceholder);
+                        
+                        // 設定下次爆炸時間
+                        this.fireworkSpawnTimer = Math.max(20, Math.random() * maxSpawnInterval);
+                    }
+                }
+                // ------------------------------------
+
+
+                // 3. 更新和繪製粒子 (從後往前迴圈，以便安全移除火花)
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const particle = this.particles[i];
+                    this.updateParticle(particle, i);
+                    this.drawParticle(particle, i);
+                }
+                
+                // 繪製閃電（如果適用）
+                if (this.effectType === 'lightning') {
+                    // 原本的閃電繪製邏輯 (未包含在此次變更中)
+                    // this.drawLightning(); 
+                }
+                
+                // 4. 重設混合模式
+                this.ctx.globalCompositeOperation = 'normal';
+
+                this.animationId = requestAnimationFrame(this.animate);
+            }
+            
+            setButtonsState(disabled) {
+                const buttons = ['downloadGifBtn', 'downloadMp4Btn', 'downloadImageBtn', 'lowLoadBtn'];
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = disabled;
+                });
+            }
+            
+            showProgress(text) {
+                const bar = document.getElementById('progressBar');
+                const fill = document.getElementById('progressFill');
+                const txt = document.getElementById('progressText');
+                if (bar && fill && txt) {
+                    bar.style.display = 'block';
+                    fill.style.width = '0%';
+                    txt.textContent = text || '';
+                }
+            }
+            
+            updateProgress(percent, text) {
+                const fill = document.getElementById('progressFill');
+                const txt = document.getElementById('progressText');
+                if (fill) fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+                if (txt && text !== undefined) txt.textContent = text;
+            }
+            
+            hideProgress() {
+                const bar = document.getElementById('progressBar');
+                const txt = document.getElementById('progressText');
+                if (bar) bar.style.display = 'none';
+                if (txt) txt.textContent = '';
+            }
+            
+            /**
+             * 修正後的 GIF 下載邏輯 (使用 gif.js)
+             */
+            async downloadGif() {
+                if (!window.GIF) {
+                    alert('GIF 函式庫未載入，無法下載 GIF。');
+                    return;
+                }
+                if (!this.mediaElement) {
+                    alert('請先上傳圖片或影片。');
+                    return;
+                }
+                
+                try {
+                    this.setButtonsState(true);
+                    const durationInSeconds = parseFloat(document.getElementById('duration').value);
+                    const fps = parseInt(document.getElementById('fps').value);
+                    const numFrames = Math.floor(durationInSeconds * fps);
+                    const delay = 1000 / fps;
+                    const quality = Math.floor(100 - parseFloat(document.getElementById('quality').value) * 100);
+
+                    this.showProgress(`開始生成 GIF (${numFrames} 幀)...`);
+                    
+                    const gif = new GIF({
+                        workers: 2, // 增加 worker 數量以加快生成速度
+                        quality: quality, 
+                        width: this.canvas.width, 
+                        height: this.canvas.height,
+                        // 關鍵修正：將 workerScript 指向 CDN 連結，解決 file:// 協定下的安全性問題
+                        workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js' 
+                    });
+
+                    // 儲存當前時間，用於重播動畫
+                    const startTime = this.time; 
+                    
+                    // 為了確保 GIF 中的粒子狀態是從頭開始的，需要重新初始化一次 (尤其是煙火)
+                    const tempEngine = new EnhancedEffectEngine();
+                    Object.assign(tempEngine, this);
+                    tempEngine.initParticles(); // 初始化粒子和計時器
+                    
+                    for (let i = 0; i < numFrames; i++) {
+                        // 強制更新畫面
+                        tempEngine.time = startTime + (i / fps);
+                        tempEngine.ctx.clearRect(0, 0, tempEngine.canvas.width, tempEngine.canvas.height);
+                        tempEngine.drawMedia(); // 繪製媒體背景
+                        tempEngine.ctx.globalCompositeOperation = tempEngine.blendMode; // 混合模式
+                        
+                        // 處理即時爆炸生成邏輯
+                        if (tempEngine.effectType === 'fireworks') {
+                            tempEngine.fireworkSpawnTimer -= 1;
+                            const maxSpawnInterval = 100 - Math.min(80, tempEngine.intensity * 0.4); 
+                            
+                            if (tempEngine.fireworkSpawnTimer <= 0) {
+                                const explosionY = tempEngine.canvas.height * (0.1 + Math.random() * 0.3); 
+                                const rocketPlaceholder = { 
+                                    kind: 'rocket',
+                                    x: tempEngine.canvas.width * (0.1 + Math.random() * 0.8),
+                                    y: explosionY,
+                                    color: `hsl(${Math.floor(Math.random() * 360)}, 80%, 60%)`,
+                                    explosionStyle: 'default' 
+                                };
+                                tempEngine.createExplosion(rocketPlaceholder);
+                                tempEngine.fireworkSpawnTimer = Math.max(20, Math.random() * maxSpawnInterval);
+                            }
+                        }
+
+                        // 繪製所有粒子
+                        for (let j = tempEngine.particles.length - 1; j >= 0; j--) {
+                            const particle = tempEngine.particles[j];
+                            tempEngine.updateParticle(particle, j);
+                            tempEngine.drawParticle(particle, j);
+                        }
+                        tempEngine.ctx.globalCompositeOperation = 'normal';
+                        
+                        // 將當前畫布內容添加到 GIF 幀
+                        gif.addFrame(tempEngine.ctx, { copy: true, delay: delay });
+                        
+                        this.updateProgress((i + 1) / numFrames * 95, `生成中... ${i + 1} / ${numFrames} 幀`);
+                        
+                        // 讓步給主執行緒，確保進度條能更新
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+
+                    gif.on('finished', (blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `animated_effect_${Date.now()}.gif`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        
+                        this.hideProgress();
+                        this.setButtonsState(false);
+                        alert('GIF 動畫下載完成！');
+                    });
+
+                    gif.on('progress', (p) => {
+                        this.updateProgress(95 + p * 5, `編碼中... ${Math.round(p * 100)}%`);
+                    });
+
+                    gif.render();
+                    
+                } catch (e) {
+                    this.hideProgress();
+                    this.setButtonsState(false);
+                    console.error('GIF 下載失敗:', e);
+                    alert('GIF 下載失敗。請嘗試降低 FPS、縮短時長或改下載 WebM。錯誤訊息: ' + e.message);
+                }
+            }
+            
+            /**
+             * 修正後的 WebM 下載邏輯 (使用 MediaRecorder)
+             */
+            async downloadMp4() {
+                if (!window.MediaRecorder) {
+                    alert('您的瀏覽器不支援 MediaRecorder API，無法錄製 WebM 影片。請嘗試下載 GIF。');
+                    return;
+                }
+                if (!this.mediaElement) {
+                    alert('請先上傳圖片或影片。');
+                    return;
+                }
+
+                try {
+                    this.setButtonsState(true);
+                    
+                    const durationInSeconds = parseFloat(document.getElementById('duration').value);
+                    const fps = parseInt(document.getElementById('fps').value);
+                    const quality = parseFloat(document.getElementById('quality').value);
+                    const frameRate = fps;
+                    const mimeType = 'video/webm; codecs=vp8'; // 使用 WebM 和 VP8 編碼
+
+                    this.showProgress('開始錄製 WebM 影片...');
+
+                    // 1. 確保動畫在錄製前啟動
+                    if (!this.animationId) {
+                         this.animate();
+                    }
+                    
+                    // 2. 獲取畫布的影片流
+                    const stream = this.canvas.captureStream(frameRate);
+                    const recorder = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerSecond: 5000000 * quality }); // 5Mbps 基準
+
+                    const chunks = [];
+                    recorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            chunks.push(e.data);
+                        }
+                    };
+
+                    const recordDurationMs = durationInSeconds * 1000;
+                    
+                    recorder.onstop = () => {
+                        this.hideProgress();
+                        this.setButtonsState(false);
+                        
+                        if (chunks.length === 0) {
+                            alert('錄製失敗：未捕獲到影片數據。');
+                            return;
+                        }
+                        
+                        // 3. 創建 Blob 並下載
+                        const blob = new Blob(chunks, { type: mimeType });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `video_effect_${Date.now()}.webm`; // 直接下載 WEBM
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        
+                        alert('WebM 影片下載完成！');
+                        
+                        // 釋放資源
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    recorder.onerror = (e) => {
+                         this.hideProgress();
+                         this.setButtonsState(false);
+                         console.error('MediaRecorder 錯誤:', e);
+                         alert('錄製 WebM 失敗。錯誤訊息: ' + e.error.message);
+                    };
+
+                    // 3. 開始錄製
+                    recorder.start();
+
+                    // 4. 設定定時器停止錄製並更新進度條
+                    const startTime = Date.now();
+                    const interval = setInterval(() => {
+                        const elapsed = Date.now() - startTime;
+                        const percent = (elapsed / recordDurationMs) * 100;
+                        this.updateProgress(percent, `錄製中... ${Math.round(percent)}%`);
+                        
+                        if (elapsed >= recordDurationMs) {
+                            clearInterval(interval);
+                            if (recorder.state === 'recording') {
+                                recorder.stop();
+                                this.updateProgress(100, '錄製完成，正在封裝檔案...');
+                            }
+                        }
+                    }, 500);
+
+                } catch (e) {
+                    this.hideProgress();
+                    this.setButtonsState(false);
+                    console.error('WebM 下載失敗:', e);
+                    alert('WebM 錄製失敗。請確認您的瀏覽器是否支援或嘗試其他編碼。錯誤訊息: ' + e.message);
+                }
+            }
+
+
+            async downloadImage() {
+                if (!this.mediaElement) {
+                    alert('請先上傳圖片或影片。');
+                    return;
+                }
+                
+                try {
+                    this.setButtonsState(true);
+                    this.showProgress('正在生成靜態圖片...');
+
+                    // 確保畫面更新一次
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.drawMedia();
+                    this.ctx.globalCompositeOperation = this.blendMode;
+                    // 粒子也需要繪製一次
+                    for (let j = 0; j < this.particles.length; j++) {
+                        // 注意：如果當前畫面是靜態圖，粒子不應更新位置，但火花需要繪製一次
+                        // 這裡我們直接使用當前幀的粒子狀態繪製。
+                        this.drawParticle(this.particles[j], j);
+                    }
+                    this.ctx.globalCompositeOperation = 'normal';
+
+                    const quality = parseFloat(document.getElementById('quality').value);
+                    const mimeType = 'image/png'; 
+                    
+                    const url = this.canvas.toDataURL(mimeType, quality);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `static_effect_${Date.now()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    this.hideProgress();
+                    this.setButtonsState(false);
+                    alert('靜態圖片下載完成！');
+                } catch(e) {
+                    this.hideProgress();
+                    this.setButtonsState(false);
+                    console.error('圖片下載失敗:', e);
+                    alert('圖片下載失敗。錯誤訊息: ' + e.message);
+                }
+            }
+        }
+        
+        // 初始化
+        window.addEventListener('load', () => {
+            try {
+                window.__engine = new EnhancedEffectEngine();
+            } catch (e) {
+                console.error('初始化失敗:', e);
+            }
+        });
+    </script>
+</body>
+</html>
