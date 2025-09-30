@@ -702,7 +702,8 @@
                         };
                     } catch (e) {
                         console.error('GIF 轉 WebM 失敗：', e);
-                        alert('GIF 轉換失敗，將以靜態圖片顯示。可嘗試低負載模式或改傳影片。');
+                        // 修正: 移除 alert，改用狀態文字
+                        document.getElementById('progressText').textContent = '❌ GIF 轉換失敗，將以靜態圖片顯示。可嘗試低負載模式或改傳影片。';
                         // 轉換失敗則退回原本圖片流程（會是靜態）
                     } finally {
                         this.hideProgress();
@@ -1575,9 +1576,8 @@
             
             hideProgress() {
                 const bar = document.getElementById('progressBar');
-                const txt = document.getElementById('progressText');
+                // 修正: 隱藏 bar，但保留 text
                 if (bar) bar.style.display = 'none';
-                if (txt) txt.textContent = '';
             }
             
             /**
@@ -1585,11 +1585,12 @@
              */
             async downloadGif() {
                 if (!window.GIF) {
-                    alert('GIF 函式庫未載入，無法下載 GIF。');
+                    // 修正: 移除 alert，改用狀態文字
+                    document.getElementById('progressText').textContent = '❌ GIF 函式庫未載入，無法下載 GIF。';
                     return;
                 }
                 if (!this.mediaElement) {
-                    alert('請先上傳圖片或影片。');
+                    document.getElementById('progressText').textContent = '❌ 請先上傳圖片或影片。';
                     return;
                 }
                 
@@ -1674,7 +1675,8 @@
                         
                         this.hideProgress();
                         this.setButtonsState(false);
-                        alert('GIF 動畫下載完成！');
+                        // 修正: 移除 alert，改用狀態文字
+                        document.getElementById('progressText').textContent = '✅ GIF 動畫下載完成！';
                     });
 
                     gif.on('progress', (p) => {
@@ -1687,7 +1689,8 @@
                     this.hideProgress();
                     this.setButtonsState(false);
                     console.error('GIF 下載失敗:', e);
-                    alert('GIF 下載失敗。請嘗試降低 FPS、縮短時長或改下載 WebM。錯誤訊息: ' + e.message);
+                    // 修正: 移除 alert，改用狀態文字
+                    document.getElementById('progressText').textContent = '❌ GIF 下載失敗。請嘗試降低 FPS、縮短時長或改下載 WebM。';
                 }
             }
             
@@ -1696,11 +1699,12 @@
              */
             async downloadMp4() {
                 if (!window.MediaRecorder) {
-                    alert('您的瀏覽器不支援 MediaRecorder API，無法錄製 WebM 影片。請嘗試下載 GIF。');
+                    // 修正: 移除 alert，改用狀態文字
+                    document.getElementById('progressText').textContent = '❌ 您的瀏覽器不支援 MediaRecorder API，無法錄製 WebM 影片。';
                     return;
                 }
                 if (!this.mediaElement) {
-                    alert('請先上傳圖片或影片。');
+                    document.getElementById('progressText').textContent = '❌ 請先上傳圖片或影片。';
                     return;
                 }
 
@@ -1738,7 +1742,8 @@
                         this.setButtonsState(false);
                         
                         if (chunks.length === 0) {
-                            alert('錄製失敗：未捕獲到影片數據。');
+                            // 修正: 移除 alert，改用狀態文字
+                            document.getElementById('progressText').textContent = '❌ 錄製失敗：未捕獲到影片數據。';
                             return;
                         }
                         
@@ -1752,7 +1757,8 @@
                         a.click();
                         document.body.removeChild(a);
                         
-                        alert('WebM 影片下載完成！');
+                        // 修正: 移除 alert，改用狀態文字
+                        document.getElementById('progressText').textContent = '✅ WebM 影片下載完成！';
                         
                         // 釋放資源
                         stream.getTracks().forEach(track => track.stop());
@@ -1762,7 +1768,8 @@
                          this.hideProgress();
                          this.setButtonsState(false);
                          console.error('MediaRecorder 錯誤:', e);
-                         alert('錄製 WebM 失敗。錯誤訊息: ' + e.error.message);
+                         // 修正: 移除 alert，改用狀態文字
+                         document.getElementById('progressText').textContent = '❌ WebM 錄製失敗。詳情請看 Console。';
                     };
 
                     // 3. 開始錄製
@@ -1788,14 +1795,15 @@
                     this.hideProgress();
                     this.setButtonsState(false);
                     console.error('WebM 下載失敗:', e);
-                    alert('WebM 錄製失敗。請確認您的瀏覽器是否支援或嘗試其他編碼。錯誤訊息: ' + e.message);
+                    // 修正: 移除 alert，改用狀態文字
+                    document.getElementById('progressText').textContent = '❌ WebM 錄製失敗。請確認您的瀏覽器是否支援或嘗試其他編碼。';
                 }
             }
 
 
             async downloadImage() {
                 if (!this.mediaElement) {
-                    alert('請先上傳圖片或影片。');
+                    document.getElementById('progressText').textContent = '❌ 請先上傳圖片或影片。';
                     return;
                 }
                 
@@ -1828,12 +1836,14 @@
                     
                     this.hideProgress();
                     this.setButtonsState(false);
-                    alert('靜態圖片下載完成！');
+                    // 修正: 移除 alert，改用狀態文字
+                    document.getElementById('progressText').textContent = '✅ 靜態圖片下載完成！';
                 } catch(e) {
                     this.hideProgress();
                     this.setButtonsState(false);
                     console.error('圖片下載失敗:', e);
-                    alert('圖片下載失敗。錯誤訊息: ' + e.message);
+                    // 修正: 移除 alert，改用狀態文字
+                    document.getElementById('progressText').textContent = '❌ 圖片下載失敗。詳情請看 Console。';
                 }
             }
         }
